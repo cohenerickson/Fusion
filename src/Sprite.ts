@@ -1,4 +1,6 @@
-import { NO_TEXTURE } from "./util";
+import { GameObject } from "./GameObject";
+import { Instance } from "./Instance";
+import { Vector, VectorLike } from "./Vector";
 
 type Options = {
   x: number;
@@ -8,10 +10,10 @@ type Options = {
   height: number;
   src: string;
   frame?: number;
-  scale?: [number, number];
+  scale?: VectorLike;
 };
 
-export class Sprite {
+export abstract class Sprite extends GameObject {
   x: number = 0;
   y: number = 0;
   z: number = 0;
@@ -19,11 +21,14 @@ export class Sprite {
   height: number = 0;
   image: HTMLImageElement;
   frames: number = 0;
-  scaleX: number = 1;
-  scaleY: number = 1;
+  scale: Vector;
   frame: number = 0;
+  instance: Instance;
 
-  constructor(options: Options) {
+  constructor(instance: Instance, options: Options) {
+    super(instance.canvas, false);
+
+    this.instance = instance;
     this.x = options.x;
     this.y = options.y;
     this.z = options.z ?? 0;
@@ -31,41 +36,18 @@ export class Sprite {
     this.height = options.height;
     this.frame = options.frame ?? 0;
 
-    if (options.scale) {
-      this.scaleX = options.scale[0];
-      this.scaleY = options.scale[1];
-    }
+    this.scale = new Vector(options.scale ?? [1, 1]);
 
-    const image = new Image();
-    image.src = options.src;
+    this.image = new Image();
+    this.image.src = options.src;
 
-    image.onload = () => {
-      this.image = image;
-
-      this.frames = Math.floor(image.width / options.width);
+    this.image.onload = () => {
+      this.frames = Math.floor(this.image.width / options.width);
     };
-
-    image.onerror = () => {
-      console.warn(`Could not load image "${options.src}"`);
-      image.src = NO_TEXTURE;
-
-      setInterval(() => {
-        this.frame = this.frame === 0 ? 1 : 0;
-      }, 1000);
-    };
-
-    this.setup();
   }
-
-  /**
-   * Called when the sprite is created
-   */
-  setup(): void | Promise<void> {}
 
   draw(ctx: CanvasRenderingContext2D, frame: number = this.frame) {
     if (!this.image) return;
-
-    // interpolate the new position
 
     ctx.drawImage(
       this.image,
@@ -73,12 +55,34 @@ export class Sprite {
       0,
       this.width,
       this.height,
-      this.x - (this.width * this.scaleX) / 2,
-      this.y - (this.height * this.scaleY) / 2,
-      this.width * this.scaleX,
-      this.height * this.scaleY
+      this.x - (this.width * this.scale.x) / 2,
+      this.y - (this.height * this.scale.y) / 2,
+      this.width * this.scale.x,
+      this.height * this.scale.y
     );
 
     this.frame = frame;
+  }
+
+  /**
+   * Move the sprite to the top of the render stack
+   */
+  toTop() {
+    const highest = Array.from(this.instance.sprites).reduce((a, b) => {
+      if (a.z > b.z) return a;
+      return b;
+    }).z;
+    this.z = highest + 1;
+  }
+
+  /**
+   * Move the sprite to the bottom of the render stack
+   */
+  toBottom() {
+    const lowest = Array.from(this.instance.sprites).reduce((a, b) => {
+      if (a.z < b.z) return a;
+      return b;
+    }).z;
+    this.z = lowest - 1;
   }
 }

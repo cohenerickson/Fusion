@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "stripInternal": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "sourceMap": true,
+    "strict": true,
+    "outDir": "dist"
+  },
+  "include": ["src", "src/example"],
+  "exclude": ["src/example"]
+}
